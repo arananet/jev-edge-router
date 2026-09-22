@@ -1,0 +1,105 @@
+---
+title: Jev edge router gateway
+slug: jev-edge-router
+type: feature
+status: review
+author: Claude
+created_at: '2026-09-22'
+updated_at: '2026-09-22'
+roles:
+  implementer: '@arananet'
+  reviewer: '@arananet'
+  qa: '@arananet'
+  product_owner: '@arananet'
+description: |
+  Turn this repository from the OpenSpec template into the jev-edge-router
+  project: an OpenAI-compatible gateway on Cloudflare Workers. For every
+  incoming chat completion the gateway computes deterministic request
+  features, asks TypeSafe Jev a small typed question set about the request,
+  and picks the cheapest model tier that can serve it, then proxies the call.
+
+  The point is cost: a caller changes one base URL and stops paying top tier
+  prices for chit-chat, without a client side change and without giving up
+  correctness when the judge is unavailable.
+acceptance_criteria:
+- Given a chat completion request, when the gateway handles it, then token
+  counts, tool presence, images, attachments and model pinning are computed in
+  code and are never sent to the judge.
+- Given a routed call, when the judge is asked, then exactly one Jev request
+  carries the whole question set, with no retries on the judge path.
+- Given the judge times out, errors or returns an unparseable answer, when the
+  policy runs, then the request is still served, using default_tier, and the
+  reason names the failure.
+- Given judge confidence below min_confidence, when the policy runs, then the
+  chosen tier is escalated by one, and given high_stakes above its threshold,
+  then high_stakes_min_tier is enforced.
+- Given a request a tier cannot serve (images, tools or context length), when
+  the policy runs, then the request moves to a tier that can, whatever the
+  judgment said.
+- Given ROUTER_MODE=shadow, when a request is routed, then the decision is
+  logged but default_tier is always served; given route, the decision is
+  applied; given off, the judge is never called.
+- Given any routed call, when the response is returned, then x-router-tier,
+  x-router-decided-tier and x-router-reason describe the decision, and a row
+  is written to the D1 decisions table.
+- Given LOG_CONTENT is unset or false, when a decision is logged, then no
+  prompt content reaches the database.
+- Given the judge vendor changes, when only config changes, then no code
+  outside src/judge/providers/ is touched; the same holds for upstream
+  vendors and src/upstream/providers/.
+test_plan:
+- 'Unit: features.ts extracts the last user message, the system excerpt, turn
+  counts, tools, images and pinned models from OpenAI shaped requests.'
+- 'Unit: policy.ts covers every rule in order, including judge failure,
+  escalation, the high stakes floor, capability floors and client pinning.'
+- 'Unit: config.ts rejects unknown tiers, tiers missing from tier_order and
+  openai-compatible tiers without a base_url.'
+- 'Unit: the judge normalises the documented typesafe/jev answer shapes (noul,
+  choice, score), unwraps the Cloudflare REST envelope, derives noul
+  confidence, and fails open on deadline and on error.'
+- 'Unit: the upstream adapters translate to the Anthropic Messages API, rewrite
+  its event stream as OpenAI chunks, and read usage for cost estimates.'
+- 'Integration: the Worker is exercised through the Workers runtime for auth,
+  request validation, the three router modes, fail open, the response headers
+  and the D1 decision row.'
+- 'Manual: wrangler dev with real credentials, one request per mode, then read
+  the decisions table.'
+qa_notes: |
+  Verified locally on 2026-09-22: 70 automated tests pass, tsc --noEmit is
+  clean, and the Worker was driven through wrangler dev on the real Workers
+  runtime with a local D1 (auth, validation, routing, fail open and the
+  decision row all confirmed).
+
+  Not verified: no live Jev call and no successful upstream completion.
+  api.cloudflare.com, gateway.ai.cloudflare.com and api.openai.com are outside
+  the egress allowlist of the environment this was built in, so the judge
+  fixtures follow the documented schema rather than a recording. Re-run
+  `npm run probe -- --record` from a network that can reach the API before
+  trusting route mode. Tracked in KNOWN_ISSUES.md.
+out_of_scope:
+- Rate limiting per client key; the gateway authenticates but does not throttle.
+- Tool calls and image blocks in the Anthropic translation, which is text only.
+- Threshold tuning; every shipped value is a conservative placeholder, not an
+  eval result.
+- Deployment: no wrangler deploy, no D1 database id, no production secrets.
+implementation_skill:
+eval_plan:
+  scenarios:
+  - Labeled prompts spanning chit-chat, lookup, summarisation, code generation,
+    debugging, formal reasoning and high stakes legal or security review, each
+    labeled with the cheapest tier a human judged acceptable.
+  metrics:
+  - Routing accuracy against the labels.
+  - Under-routing rate, reported separately from over-routing because sending
+    too low is the costly failure.
+  - Calibration: accuracy bucketed by judge confidence.
+  - Estimated savings against always using the top tier.
+technical_notes: |
+  Cloudflare Workers, TypeScript strict, web platform APIs only. Judge and
+  upstream vendors sit behind adapters; policy.ts is a pure function with no
+  I/O so it stays exhaustively testable. The judge deadline must stay small
+  relative to upstream latency, and judge latency is logged so the tradeoff
+  can be measured rather than assumed. Secrets come from wrangler secret and
+  local runs read .dev.vars, which is git ignored.
+linked_issues: []
+linked_prs: []
