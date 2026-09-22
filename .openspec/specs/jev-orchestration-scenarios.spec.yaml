@@ -1,0 +1,54 @@
+---
+title: jev-orchestration-scenarios
+slug: jev-orchestration-scenarios
+type: feature
+status: review
+author: Arananet
+created_at: '2026-09-22'
+updated_at: '2026-09-22'
+roles:
+  implementer: 
+  reviewer: 
+  qa: 
+  product_owner: 
+description: >-
+  Evaluate TypeSafe Jev as a routing judge using human-labeled orchestration
+  scenarios. The evaluation must compare Jev-assisted policy decisions with the
+  configured fixed default tier, so it measures decision quality and costly
+  routing errors rather than provider reachability or HTTP status codes.
+acceptance_criteria:
+- Given a labeled orchestration scenario, when the evaluator uses a Jev judgment and policy, then it reports the selected tier relative to the cheapest acceptable human label.
+- The evaluator reports the fixed `default_tier` baseline and Jev-assisted results separately for exact routing, under-routing, severity-weighted under-routing, and over-routing.
+- The evaluator reports how often Jev corrects a baseline under-route and avoids a baseline over-route, without treating a successful provider response as a quality metric.
+- The evaluator reports judge availability and failure reasons separately from decision-quality metrics, and supports an evaluation-only deadline override without changing production routing configuration.
+- The repository includes labeled scenarios spanning simple requests, coding, planning or reasoning, long output, high-stakes, and capability constraints.
+- A live evaluation mode refuses to run when Cloudflare credentials are unavailable rather than silently replaying hand-written Jev judgments.
+test_plan:
+- Run the evaluator against the offline example dataset and verify it reports baseline and Jev-assisted metrics separately.
+- Run the live scenario dataset with valid Cloudflare credentials and verify every scenario reports a Jev-assisted policy decision or a judge failure.
+- Run `npm run typecheck`.
+qa_notes: |
+  Human reviewers assign the cheapest acceptable tier without seeing Jev output.
+  Report scenario-level disagreements for review; do not use a provider HTTP status
+  as evidence that Jev made a useful orchestration decision.
+out_of_scope:
+- Measuring answer quality from the selected upstream model.
+- Benchmarking provider latency, throughput, or availability.
+- Claiming superiority over a general-purpose LLM router without a separately labeled comparison.
+implementation_skill: 
+eval_plan:
+  scenarios:
+    - eval/orchestration-scenarios.jsonl
+  metrics:
+    - exact routing rate
+    - under-routing rate
+    - severity-weighted under-routing impact
+    - over-routing rate
+    - baseline under-routes corrected by Jev
+    - baseline over-routes avoided by Jev
+technical_notes: |
+  The fixed baseline is the configured default_tier. Existing recorded or
+  hand-written judgments remain useful for policy regression tests but cannot be
+  used to claim live Jev orchestration quality.
+linked_issues: []
+linked_prs: []

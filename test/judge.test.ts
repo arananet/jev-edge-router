@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import routerFixture from '../fixtures/jev-router-questions.expected.json';
 import restFixture from '../fixtures/jev-rest-envelope.expected.json';
+import completedRestFixture from '../fixtures/jev-rest-completed-envelope.expected.json';
 import vendorFixture from '../fixtures/jev-vendor-example.json';
 import { runJudge, overallConfidence, type JudgeProvider } from '../src/judge/judge';
 import { buildState, QUESTIONS, TASK_TYPES, type JudgeState } from '../src/judge/questions';
@@ -86,6 +87,16 @@ describe('judge response', () => {
     const judgments = normaliseJevResponse(restFixture);
     expect(judgments.task_type.value).toBe('chit_chat');
     expect(judgments.difficulty.value).toBeCloseTo(0.04);
+  });
+
+  it('unwraps the completed Cloudflare REST envelope', () => {
+    const judgments = normaliseJevResponse(completedRestFixture);
+    expect(judgments.task_type.value).toBe('code_debugging');
+    expect(judgments.difficulty.value).toBeCloseTo(1.86);
+  });
+
+  it('rejects a completed REST envelope without a valid nested result', () => {
+    expect(() => normaliseJevResponse({ success: true, result: { state: 'Completed', result: {} } })).toThrow();
   });
 
   it('derives noul confidence from distance to 0.5', () => {

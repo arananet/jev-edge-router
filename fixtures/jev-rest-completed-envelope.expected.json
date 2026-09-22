@@ -1,0 +1,27 @@
+{
+  "_note": "Sanitized shape observed from Cloudflare REST after a completed Jev job.",
+  "success": true,
+  "result": {
+    "state": "Completed",
+    "result": {
+      "model": "jev-1.13.0",
+      "answers": {
+        "task_type": {
+          "type": "choice",
+          "choice": "code_debugging",
+          "confidence": 0.8,
+          "probabilities": { "code_debugging": 0.87, "factual_lookup": 0.13 }
+        },
+        "difficulty": {
+          "type": "score",
+          "score": 1.86,
+          "confidence": 0.71,
+          "probabilities": { "0": 0.03, "1": 0.38, "2": 0.51, "3": 0.08 }
+        },
+        "needs_long_output": { "type": "noul", "noul": 0.18 },
+        "high_stakes": { "type": "noul", "noul": 0.05 }
+      },
+      "usage": { "input_tokens": 402, "output_tokens": 61 }
+    }
+  }
+}

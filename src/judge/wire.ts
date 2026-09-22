@@ -54,6 +54,12 @@ export const JevResultSchema = z.object({
 const JevEnvelopeSchema = z.union([
   JevResultSchema,
   z.object({ success: z.boolean().optional(), result: JevResultSchema }).transform((env) => env.result),
+  z
+    .object({
+      success: z.literal(true),
+      result: z.object({ state: z.literal('Completed'), result: JevResultSchema }),
+    })
+    .transform((env) => env.result.result),
 ]);
 
 export type JevResult = z.infer<typeof JevResultSchema>;

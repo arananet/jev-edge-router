@@ -24,10 +24,12 @@ acceptance_criteria:
 - The README includes a Mermaid chart contrasting fixed-model OpenAI-compatible routing with Jev-assisted orchestration and its deterministic policy boundary.
 - The README includes a decision-property comparison between TypeSafe Jev and a general-purpose LLM used as a router, without unmeasured quality, latency, or cost claims.
 - The README embeds a local sanitized screenshot of actual live-validation output with no credentials, account identifiers, or raw request data.
+- README, known issues, fixture notes, and Jev wire documentation describe the verified direct provider calls and the remaining completed-envelope normalization gap.
 test_plan:
 - Run the repository Markdown linter against README.md.
 - Review every badge target and label for accuracy against package.json, LICENSE, and the documented runtime.
 - Inspect the committed screenshot for legibility and absence of secret material.
+- Search repository documentation for stale claims that no live call has been made.
 qa_notes: |
   Verify badge image URLs and links contain no repository-specific secret or account information.
 out_of_scope:

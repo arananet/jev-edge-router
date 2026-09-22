@@ -4,10 +4,10 @@ Source: the Workers AI model catalogue entry for `typesafe/jev`, read 2026-09-22
 own quick start is kept verbatim in `fixtures/jev-vendor-example.json`, and the adapters in
 `src/judge/` implement exactly that schema.
 
-Not yet confirmed by a call this repo made: `api.cloudflare.com` is outside the egress
-allowlist of the environment the code was written in, so `fixtures/jev-router-questions.expected.json`
-and `fixtures/jev-rest-envelope.expected.json` were written from the documented schema rather
-than recorded. See `KNOWN_ISSUES.md`.
+Confirmed by a direct live call on 2026-09-22: Cloudflare REST returned HTTP 200 from
+`typesafe/jev` with model `jev-1.13.0`, classifications, and usage. The router-shaped probe
+also reached the endpoint successfully, but exposed a response-normalization gap described
+below. The expected fixtures remain schema-shaped rather than raw recorded output.
 
 Model facts from the same page: context length 32,000 tokens, input priced at $0.042 per
 million tokens, zero data retention, provider model `jev-latest`, answer types Noul, Choice and
@@ -88,8 +88,17 @@ same state, no retries.
 }
 ```
 
-The REST API wraps that object in the usual `{ "success": true, "result": ... }`; the binding
-returns it directly. `normaliseJevResponse` accepts both.
+The binding returns the result directly. Earlier REST documentation describes the usual
+`{ "success": true, "result": ... }` wrapper, which `normaliseJevResponse` accepts. The live
+REST response instead used a completed-job wrapper:
+
+```json
+{ "success": true, "result": { "state": "Completed", "result": { "model": "jev-1.13.0" } } }
+```
+
+`normaliseJevResponse` accepts this completed-job wrapper, as well as direct and one-level REST
+results. Focused wire tests cover all three forms and reject incomplete nested results. A fresh
+post-fix live probe remains pending in an environment with Cloudflare credentials.
 
 Normalisation rules, all covered by `test/judge.test.ts`:
 

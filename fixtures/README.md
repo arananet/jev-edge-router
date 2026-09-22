@@ -7,9 +7,11 @@ Jev requests and responses the adapters are tested against.
 | `jev-vendor-example.json` | The vendor's own quick start for `typesafe/jev`, kept verbatim as the reference envelope. |
 | `jev-router-questions.expected.json` | This repo's four questions in that answer shape. |
 | `jev-rest-envelope.expected.json` | The same result inside the Cloudflare REST `{success, result}` wrapper. |
+| `jev-rest-completed-envelope.expected.json` | Sanitized completed-job REST response observed from Cloudflare. |
 
-The last two were written from the documented schema, **not recorded from a live call**:
-`api.cloudflare.com` is outside this environment's egress allowlist. Record real ones with
+The last two remain schema-shaped rather than raw recorded output. A live Cloudflare REST call
+has since succeeded and returned a completed-job envelope supported by the normalizer.
+Record a sanitized real sample with
 
 ```bash
 CLOUDFLARE_ACCOUNT_ID=... CLOUDFLARE_API_TOKEN=... npm run probe -- --record "a test prompt"

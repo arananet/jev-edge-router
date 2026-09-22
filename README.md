@@ -64,11 +64,12 @@ this router's policy.
 
 ---
 
-## Live validation
+## Integration prerequisite
 
 The sanitized report below captures a real OpenAI-compatible upstream response, including its model
-and token usage. It contains no credentials, account identifiers, request headers, or raw prompt
-content.
+and token usage. It verifies an adapter prerequisite only; it is not evidence that Jev makes good
+or useful orchestration decisions. It contains no credentials, account identifiers, request headers,
+or raw prompt content.
 
 ![Sanitized live OpenAI upstream validation report](docs/images/jev-live-validation.png)
 
@@ -160,14 +161,58 @@ escalate one tier below `min_confidence`; enforce `high_stakes_min_tier` above
 ## Eval
 
 ```bash
-npm run eval -- eval/dataset.jsonl config/tiers.json
+npm run eval -- eval/dataset.example.jsonl config/tiers.example.json
+
+# Requires CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in the shell.
+npm run eval -- --live eval/orchestration-scenarios.jsonl config/tiers.json
+
+# Evaluation-only: measure Jev quality with a larger deadline; does not change production config.
+npm run eval -- --live --deadline-ms=3000 eval/orchestration-scenarios.jsonl config/tiers.json
 ```
 
-Replays a labeled dataset (prompt plus the cheapest tier a human judged acceptable) through the
-judge and policy only, no upstream calls. It reports routing accuracy, under-routing and
-over-routing separately (under-routing is the costly failure), accuracy bucketed by judge
-confidence, and estimated savings against always using the top tier. Set thresholds from that
-output, not from intuition.
+The question is whether Jev-assisted policy selects the cheapest adequate tier more safely than a
+fixed default tier, not whether the judge returned HTTP `200`. Each scenario has a human-selected
+cheapest acceptable tier and an under-routing severity weight assigned without seeing Jev output.
+The live command always calls Jev and refuses to run without Cloudflare credentials; it never
+replays a fixture. It reports both fixed-baseline and Jev-assisted exact routing, under-routing,
+severity-weighted under-routing impact, over-routing, baseline errors corrected or avoided by Jev,
+and confidence calibration. The supplied example dataset is replay-only policy coverage, not Jev
+performance evidence.
+
+The live report also distinguishes judge availability from decision quality. A timeout causes the
+serving policy to fail open, but it is not counted as a valid Jev judgment when comparing Jev to
+the baseline. `--deadline-ms` changes only the evaluator's budget, never the Worker configuration.
+
+The live scenario set covers simple requests, coding and debugging, multi-step planning, long
+deliverables, high-stakes review, image capability, and tool use. Review scenario-level
+disagreements before changing thresholds or making comparative claims.
+
+The latest sanitized live run completed all seven scenarios with a `3000 ms` evaluation-only
+deadline. Jev-assisted policy improved exact routing from `57.1%` to `71.4%` and removed the
+baseline's severity-weighted under-routing impact, while retaining two over-routes. This small,
+scenario-specific sample is evidence to inspect, not a general superiority claim.
+
+![Sanitized live Jev orchestration evaluation](docs/images/jev-orchestration-evaluation.png)
+
+## Enterprise take
+
+Jev is a credible **routing-signal component**, not an autonomous routing authority. In this
+small live sample it removed the baseline's only high-severity under-route and improved exact
+routing, while its typed output, deterministic policy, and decision telemetry make each route
+reviewable. That is enough evidence to start a controlled adoption; it is not evidence to switch
+all enterprise traffic to dynamic routing.
+
+**Recommended rollout:** run `shadow` mode against a representative, approved traffic sample;
+review disagreements and latency by scenario family; then canary `route` mode for bounded,
+non-sensitive workloads. Keep hard capability constraints, client pinning, and high-stakes floors
+in deterministic policy, with fail-open to the fixed tier on any judge failure.
+
+**Production gates:** establish p95/p99 judge latency and a deadline that preserves the user
+experience; expand independently labeled scenarios before changing thresholds; obtain data-term
+and residency approval before sending real content; add rate limiting and per-tenant cost limits;
+and close the upstream tool/image translation gaps for every tier eligible to serve such traffic.
+The observed REST response took about `1436 ms`, so the configured `400 ms` production deadline
+currently favors availability through fail-open over dynamic-routing coverage.
 
 ## Telemetry and privacy
 
@@ -178,14 +223,14 @@ usage and estimated cost against the cost of the top tier. Prompt content is **n
 
 ## Honest limitations
 
-- **No live call has been made from this repo.** The adapters implement the documented
-  `typesafe/jev` schema, but `api.cloudflare.com` and `api.openai.com` are both outside the
-  egress allowlist of the environment this was written in, so the fixtures are schema-shaped,
-  not recorded. Probe first: `npm run probe -- --record`. See
-  [`docs/jev-wire-format.md`](docs/jev-wire-format.md).
-- **No routing accuracy numbers yet.** Every threshold shipped is a conservative placeholder,
-  not an eval result, and the example dataset carries hand-written judgments so the harness
-  runs offline. Nothing here reproduces TypeSafe's own speed or accuracy figures.
+- **The completed Cloudflare REST envelope is normalized and unit-tested.** The parser accepts
+  `{ success: true, result: { state: "Completed", result: ... } }` as well as direct and
+  one-level results. A post-fix live probe normalized a REST response in about `1436 ms`. See
+  [docs/jev-wire-format.md](docs/jev-wire-format.md).
+- **The live Jev sample is small.** Seven labeled scenarios improved exact routing from `57.1%`
+  to `71.4%` and eliminated under-routing in that sample, but are not sufficient to tune
+  thresholds or claim general accuracy or superiority. The replay example contains hand-written
+  judgments and must not be used as evidence.
 - **The TypeSafe and Vercel judge endpoints are guesses.** Only the two Cloudflare paths are
   documented.
 - **No rate limiting.** Client keys are authenticated but not throttled.
