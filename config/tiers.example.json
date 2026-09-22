@@ -12,7 +12,7 @@
     "multi_step_planning_or_agentic": "mid"
   },
   "long_output_min_tier": "mid",
-  "judge": { "provider": "cloudflare", "deadline_ms": 400, "max_chars": 2000 },
+  "judge": { "provider": "cloudflare", "model": "typesafe/jev", "deadline_ms": 400, "max_chars": 2000 },
   "tiers": {
     "small": {
       "provider": "openai-compatible",

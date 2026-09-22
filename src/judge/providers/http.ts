@@ -7,7 +7,7 @@ export async function postJudge(
   headers: Record<string, string>,
   state: JudgeState,
   signal: AbortSignal,
-  model?: string,
+  model: string,
 ): Promise<Judgments> {
   const response = await fetch(url, {
     method: 'POST',

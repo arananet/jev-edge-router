@@ -37,12 +37,12 @@ export async function runJudge(
   }
 }
 
-/** Lowest confidence across the questions the policy actually reads. */
+/**
+ * Lowest confidence across the two answers that pick the tier. Jev reports no confidence for
+ * a noul answer, only its probability, so their confidence is derived (distance from 0.5) and
+ * they act as floors rather than as the primary choice. Letting a derived number drive the
+ * escalation rule would escalate on every merely undecided noul.
+ */
 export function overallConfidence(judgments: Judgments): number {
-  return Math.min(
-    judgments.task_type.confidence,
-    judgments.difficulty.confidence,
-    judgments.high_stakes.confidence,
-    judgments.needs_long_output.confidence,
-  );
+  return Math.min(judgments.task_type.confidence, judgments.difficulty.confidence);
 }

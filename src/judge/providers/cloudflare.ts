@@ -1,8 +1,8 @@
 import type { JudgeProvider } from '../judge';
 import type { JudgeState, Judgments } from '../questions';
-import { buildJevPayload, normaliseJevResponse } from '../wire';
+import { buildJevInput, normaliseJevResponse } from '../wire';
 
-const DEFAULT_MODEL = '@typesafe/jev-1';
+const DEFAULT_MODEL = 'typesafe/jev';
 
 /**
  * Jev through the Workers AI binding. The binding takes no AbortSignal, so the deadline is
@@ -17,9 +17,11 @@ export class CloudflareJudgeProvider implements JudgeProvider {
   ) {}
 
   async judge(state: JudgeState, signal: AbortSignal): Promise<Judgments> {
-    const payload = buildJevPayload(state);
     // Adapter boundary: the binding is typed against a fixed model catalogue.
-    const call = (this.ai.run as (model: string, input: unknown) => Promise<unknown>)(this.model, payload);
+    const call = (this.ai.run as (model: string, input: unknown) => Promise<unknown>)(
+      this.model,
+      buildJevInput(state),
+    );
     const raw = await Promise.race([call, abortPromise(signal)]);
     return normaliseJevResponse(raw);
   }

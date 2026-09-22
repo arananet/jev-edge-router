@@ -20,6 +20,8 @@ database_id = "replace-me-after-wrangler-d1-create"
 
 # Secrets (set with `wrangler secret put <NAME>`), never in this file:
 #   ROUTER_API_KEYS        comma separated client keys accepted by the gateway
-#   TYPESAFE_API_KEY       TypeSafe REST judge provider
+#   CLOUDFLARE_ACCOUNT_ID  only for judge.provider=cloudflare-rest
+#   CLOUDFLARE_API_TOKEN   only for judge.provider=cloudflare-rest
+#   TYPESAFE_API_KEY       TypeSafe REST judge provider (endpoint unverified)
 #   VERCEL_AI_GATEWAY_KEY  Vercel AI Gateway judge provider
 #   UPSTREAM_API_KEY_<TIER> upstream credential per tier, tier name upper-cased

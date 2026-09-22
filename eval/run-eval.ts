@@ -12,7 +12,8 @@ import { parseConfig, type RouterConfig } from '../src/config';
 import { extractFeatures } from '../src/features';
 import { JudgmentsSchema, type Judgments } from '../src/judge/questions';
 import { runJudge } from '../src/judge/judge';
-import { TypeSafeJudgeProvider } from '../src/judge/providers/typesafe';
+import { CloudflareRestJudgeProvider } from '../src/judge/providers/cloudflare-rest';
+import { normaliseJevResponse } from '../src/judge/wire';
 import { decide } from '../src/policy';
 
 interface Row {
@@ -21,6 +22,9 @@ interface Row {
   label_tier: string;
   system?: string;
   turns?: number;
+  /** A recorded Jev result, replayed offline. */
+  jev?: unknown;
+  /** An already normalised judgment, replayed offline. */
   judgments?: unknown;
 }
 
@@ -33,13 +37,17 @@ const rows: Row[] = readFileSync(datasetPath, 'utf8')
   .filter((line) => line.trim().length > 0)
   .map((line) => JSON.parse(line) as Row);
 
-const apiKey = process.env.TYPESAFE_API_KEY;
-const needsLiveJudge = rows.some((row) => row.judgments === undefined);
-if (needsLiveJudge && !apiKey) {
-  console.error('dataset has rows without recorded judgments and TYPESAFE_API_KEY is not set; skipping');
+const accountId = process.env['CLOUDFLARE_ACCOUNT_ID'];
+const apiToken = process.env['CLOUDFLARE_API_TOKEN'];
+const needsLiveJudge = rows.some((row) => row.judgments === undefined && row.jev === undefined);
+if (needsLiveJudge && !(accountId && apiToken)) {
+  console.error('dataset has rows without recorded judgments and no Cloudflare credentials are set; skipping');
   process.exit(78);
 }
-const provider = apiKey ? new TypeSafeJudgeProvider(apiKey, config.judge.base_url, config.judge.model) : null;
+const provider =
+  accountId && apiToken
+    ? new CloudflareRestJudgeProvider(accountId, apiToken, config.judge.model, config.judge.base_url)
+    : null;
 
 interface Outcome {
   id: string;
@@ -64,6 +72,8 @@ for (const row of rows) {
   let judgeError: string | null = null;
   if (row.judgments !== undefined) {
     judgments = JudgmentsSchema.parse(row.judgments);
+  } else if (row.jev !== undefined) {
+    judgments = normaliseJevResponse(row.jev);
   } else if (provider) {
     const outcome = await runJudge(provider, features, config);
     if (outcome.ok) judgments = outcome.judgments;

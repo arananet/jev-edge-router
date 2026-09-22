@@ -1,0 +1,51 @@
+{
+  "_source": "Workers AI model catalogue page for typesafe/jev, read 2026-09-22",
+  "_note": "The vendor's own quick start, kept verbatim as the reference for the envelope. Not a call this repo made, and not our question set.",
+  "request": {
+    "model": "typesafe/jev",
+    "input": {
+      "state": "Help! My payouts have been failing for 3 days.",
+      "questions": {
+        "is_urgent": {
+          "type": "noul",
+          "instructions": "Does this convey urgency?",
+          "criteria": { "true": "Explicitly time-sensitive", "false": "No urgency expressed" }
+        },
+        "department": {
+          "type": "choice",
+          "instructions": "Which team should handle this?",
+          "criteria": {
+            "billing": "Payments, invoicing, refunds",
+            "technical": "Bugs, outages, integrations",
+            "sales": "Pricing, upgrades, new accounts"
+          }
+        },
+        "frustration": {
+          "type": "score",
+          "instructions": "How frustrated is the customer?",
+          "criteria": ["Calm", "Frustrated", "Very angry"]
+        }
+      }
+    }
+  },
+  "response": {
+    "model": "jev-1.13.0",
+    "answers": {
+      "is_urgent": { "type": "noul", "noul": 0.95 },
+      "department": {
+        "type": "choice",
+        "choice": "billing",
+        "confidence": 0.8,
+        "probabilities": { "billing": 0.87, "sales": 0, "technical": 0.13 }
+      },
+      "frustration": {
+        "type": "score",
+        "score": 1.04,
+        "confidence": 0.94,
+        "legend": { "0": "Calm", "1": "Frustrated", "2": "Very angry" },
+        "probabilities": { "0": 0, "1": 0.96, "2": 0.04 }
+      }
+    },
+    "usage": { "input_tokens": 426, "output_tokens": 73 }
+  }
+}

@@ -1,32 +1,43 @@
 # Jev wire format
 
-Status on 2026-09-22: **assumed, not verified.** No TypeSafe or Vercel AI Gateway credentials
-were available while `src/judge/` was written, so nothing in this document was recorded from a
-live endpoint. Treat it as the contract the adapters currently implement, not as evidence.
+Source: the Workers AI model catalogue entry for `typesafe/jev`, read 2026-09-22. The vendor's
+own quick start is kept verbatim in `fixtures/jev-vendor-example.json`, and the adapters in
+`src/judge/` implement exactly that schema.
 
-## How to verify
+Not yet confirmed by a call this repo made: `api.cloudflare.com` is outside the egress
+allowlist of the environment the code was written in, so `fixtures/jev-router-questions.expected.json`
+and `fixtures/jev-rest-envelope.expected.json` were written from the documented schema rather
+than recorded. See `KNOWN_ISSUES.md`.
+
+Model facts from the same page: context length 32,000 tokens, input priced at $0.042 per
+million tokens, zero data retention, provider model `jev-latest`, answer types Noul, Choice and
+Score.
+
+## How to record a real sample
 
 ```bash
-TYPESAFE_API_KEY=... npm run probe -- "why is my worker returning 522?"
-TYPESAFE_API_KEY=... npm run probe -- --vercel "..."
+CLOUDFLARE_ACCOUNT_ID=... CLOUDFLARE_API_TOKEN=... \
+  npm run probe -- --record "why is my worker returning 522?"
 ```
 
-The probe prints the request and response and writes a redacted copy to
-`fixtures/jev-<provider>.recorded.json`. Redaction keeps every field name and every
-probability, and replaces the prompt with `<redacted>`.
+The probe prints the request, the raw response and the normalised judgment, and with
+`--record` writes `fixtures/jev-cloudflare.recorded.json` with the state replaced by
+`<redacted>`. Point the tests at the recorded file and delete the "expected" ones.
 
-For the Workers AI binding, run `wrangler dev` with `ROUTER_MODE=shadow` and a config whose
-`judge.provider` is `cloudflare`, send a request, and read the decision row in D1.
+For the Workers AI binding, run `wrangler dev` with `judge.provider: "cloudflare"` and read the
+decision row in D1.
 
-After recording: correct `src/judge/wire.ts`, replace the synthetic fixtures with the recorded
-one, update this document with the observed envelope and the date, and remove the
-"unverified" entry from `KNOWN_ISSUES.md`.
+## Request
 
-## Request the adapters send
+Through the binding: `env.AI.run('typesafe/jev', input)`.
+Through REST: `POST /client/v4/accounts/{account_id}/ai/run` with `{ "model": "typesafe/jev",
+"input": ... }`.
+
+`input.state` is a string, an object or an array. This router sends an object, so the judge sees
+the free text fields separately:
 
 ```json
 {
-  "model": "jev-1",
   "state": {
     "request": {
       "last_user_message": "<truncated to judge.max_chars>",
@@ -34,41 +45,65 @@ one, update this document with the observed envelope and the date, and remove th
       "conversation_turns": 6
     }
   },
-  "questions": [
-    { "name": "task_type", "type": "Choice", "question": "...", "options": ["chit_chat", "..."] },
-    { "name": "difficulty", "type": "Score", "question": "...", "levels": { "0": "...", "3": "..." } },
-    { "name": "needs_long_output", "type": "Noul", "question": "..." },
-    { "name": "high_stakes", "type": "Noul", "question": "..." }
-  ]
+  "questions": {
+    "task_type": {
+      "type": "choice",
+      "instructions": "Which single category best describes what the user is asking the assistant for?",
+      "criteria": { "chit_chat": "Greetings, small talk...", "code_debugging": "..." }
+    },
+    "difficulty": {
+      "type": "score",
+      "instructions": "How demanding is this request for a language model?",
+      "criteria": ["A short answer any small model...", "...", "...", "..."]
+    },
+    "needs_long_output": {
+      "type": "noul",
+      "instructions": "Does the request ask for a long, structured deliverable?",
+      "criteria": { "true": "Asks for a document, report...", "false": "A short answer..." }
+    },
+    "high_stakes": { "type": "noul", "instructions": "...", "criteria": { "true": "...", "false": "..." } }
+  }
 }
 ```
 
-One request per routed call, every question evaluated against the same state, no retries.
+`criteria` shapes follow the answer type: a `true`/`false` map for noul, a label map for choice,
+an ordered list of levels for score. One request per routed call, every question against the
+same state, no retries.
 
-## Response the adapters accept
-
-`normaliseJevResponse` accepts both an array of answers and an object keyed by question name,
-because the two forms appear in circulation and the cost of accepting both is one branch:
+## Response
 
 ```json
 {
-  "answers": [
-    { "name": "task_type", "value": "code_debugging", "confidence": 0.72,
-      "distribution": { "code_debugging": 0.72, "code_generation": 0.18, "other": 0.1 } },
-    { "name": "difficulty", "value": 2, "confidence": 0.64,
-      "distribution": { "0": 0.05, "1": 0.15, "2": 0.64, "3": 0.16 } },
-    { "name": "needs_long_output", "probability": 0.21, "confidence": 0.79 },
-    { "name": "high_stakes", "probability": 0.08, "confidence": 0.9 }
-  ]
+  "model": "jev-1.13.0",
+  "answers": {
+    "task_type": { "type": "choice", "choice": "code_debugging", "confidence": 0.8,
+                   "probabilities": { "code_debugging": 0.87, "code_generation": 0.13 } },
+    "difficulty": { "type": "score", "score": 1.86, "confidence": 0.71,
+                    "legend": { "0": "...", "3": "..." },
+                    "probabilities": { "0": 0.02, "1": 0.24, "2": 0.6, "3": 0.14 } },
+    "needs_long_output": { "type": "noul", "noul": 0.18 },
+    "high_stakes": { "type": "noul", "noul": 0.05 }
+  },
+  "usage": { "input_tokens": 512, "output_tokens": 88 }
 }
 ```
 
+The REST API wraps that object in the usual `{ "success": true, "result": ... }`; the binding
+returns it directly. `normaliseJevResponse` accepts both.
+
 Normalisation rules, all covered by `test/judge.test.ts`:
 
-- A boolean answer may carry `probability`, a boolean `value`, or a `distribution` with a
-  `true`/`yes` key. Anything else is an error, never a silent zero.
-- A missing `confidence` falls back to the highest probability in the distribution, and to 0
-  when there is no distribution. A 0 confidence escalates one tier under policy rule 5, so an
-  underspecified answer costs money rather than correctness.
-- An unknown `task_type` or a non numeric `difficulty` throws. The judge call then fails open
-  and the request goes to `default_tier`.
+- A **score** answer is a float, not an integer: `1.86` means "between careful and multi-step,
+  closer to multi-step". The policy rounds it only when indexing the difficulty table, so the
+  fractional part is preserved in telemetry.
+- The score range follows the number of criteria. Four difficulty levels give a 0 to 3 score,
+  which is why `DIFFICULTY_LEVELS` has exactly four entries.
+- A **noul** answer carries a probability and no confidence. `noulConfidence` derives one as
+  the distance from 0.5, doubled, so a genuinely undecided answer reads as zero confidence.
+  Only `task_type` and `difficulty` feed the `min_confidence` escalation, because those two
+  pick the tier and are the two Jev reports a real confidence for.
+- A missing `confidence` falls back to the highest value in `probabilities`, and to 0 when
+  there are none. Zero confidence escalates one tier under policy rule 5, so an underspecified
+  answer costs money rather than correctness.
+- An unknown `choice` or a malformed answer throws. The judge call then fails open and the
+  request goes to `default_tier`.

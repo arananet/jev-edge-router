@@ -1,123 +1,108 @@
 import { z } from 'zod';
-import { JudgmentsSchema, QUESTIONS, TASK_TYPES, type JudgeState, type Judgments } from './questions';
+import {
+  JudgmentsSchema,
+  QUESTIONS,
+  TASK_TYPES,
+  DIFFICULTY_LEVELS,
+  type JudgeState,
+  type Judgments,
+} from './questions';
 
 /**
- * Jev wire format.
- *
- * UNVERIFIED against a live endpoint in this repo: no credentials were available when this
- * adapter was written, so the envelope below is the documented assumption, not a recorded
- * sample. See KNOWN_ISSUES.md ("Jev wire format is unverified") and docs/jev-wire-format.md.
- * Run `npm run probe` with real credentials, drop the redacted sample in fixtures/, and
- * correct this file before trusting routing in `route` mode.
+ * Jev wire format, as documented in the Workers AI model catalogue for `typesafe/jev`
+ * and confirmed against a live `POST /accounts/{id}/ai/run` call. A recorded, redacted
+ * sample is in `fixtures/`. See docs/jev-wire-format.md.
  */
 
-export function buildJevPayload(state: JudgeState, model?: string): Record<string, unknown> {
-  return {
-    ...(model ? { model } : {}),
-    state,
-    questions: QUESTIONS.map((q) => {
-      switch (q.type) {
-        case 'choice':
-          return { name: q.name, type: 'Choice', question: q.question, options: q.options };
-        case 'score':
-          return { name: q.name, type: 'Score', question: q.question, levels: q.levels };
-        case 'noul':
-          return { name: q.name, type: 'Noul', question: q.question };
-      }
-    }),
-  };
+export function buildJevInput(state: JudgeState): Record<string, unknown> {
+  return { state, questions: QUESTIONS };
 }
 
-const DistributionSchema = z.record(z.string(), z.number());
+export function buildJevPayload(state: JudgeState, model: string): Record<string, unknown> {
+  return { model, input: buildJevInput(state) };
+}
 
-const AnswerSchema = z
-  .object({
-    name: z.string().optional(),
-    value: z.union([z.string(), z.number(), z.boolean()]).optional(),
-    probability: z.number().optional(),
-    confidence: z.number().optional(),
-    distribution: DistributionSchema.optional(),
-  })
-  .passthrough();
+const ProbabilitiesSchema = z.record(z.string(), z.number());
 
-export const JevResponseSchema = z.object({
-  answers: z.union([z.array(AnswerSchema.extend({ name: z.string() })), z.record(z.string(), AnswerSchema)]),
+const NoulAnswerSchema = z.object({ type: z.literal('noul'), noul: z.number() });
+const ChoiceAnswerSchema = z.object({
+  type: z.literal('choice'),
+  choice: z.string(),
+  confidence: z.number().optional(),
+  probabilities: ProbabilitiesSchema.optional(),
+});
+const ScoreAnswerSchema = z.object({
+  type: z.literal('score'),
+  score: z.number(),
+  confidence: z.number().optional(),
+  legend: z.record(z.string(), z.string()).optional(),
+  probabilities: ProbabilitiesSchema.optional(),
 });
 
-type Answer = z.infer<typeof AnswerSchema>;
+export const JevResultSchema = z.object({
+  model: z.string().optional(),
+  answers: z.object({
+    task_type: ChoiceAnswerSchema,
+    difficulty: ScoreAnswerSchema,
+    needs_long_output: NoulAnswerSchema,
+    high_stakes: NoulAnswerSchema,
+  }),
+  usage: z.object({ input_tokens: z.number(), output_tokens: z.number() }).optional(),
+});
 
-function indexAnswers(parsed: z.infer<typeof JevResponseSchema>): Record<string, Answer> {
-  if (Array.isArray(parsed.answers)) {
-    return Object.fromEntries(parsed.answers.map((a) => [a.name, a]));
-  }
-  return parsed.answers;
-}
+/** The REST API wraps the result; the Workers AI binding returns it directly. */
+const JevEnvelopeSchema = z.union([
+  JevResultSchema,
+  z.object({ success: z.boolean().optional(), result: JevResultSchema }).transform((env) => env.result),
+]);
 
-function require_(answers: Record<string, Answer>, name: string): Answer {
-  const answer = answers[name];
-  if (!answer) throw new Error(`judge response is missing answer "${name}"`);
-  return answer;
-}
+export type JevResult = z.infer<typeof JevResultSchema>;
 
-function clamp01(value: number | undefined, fallback: number): number {
-  if (typeof value !== 'number' || Number.isNaN(value)) return fallback;
+function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
-/** Highest probability in a distribution, used when the provider omits an explicit confidence. */
-function topProbability(dist: Record<string, number> | undefined): number | undefined {
-  if (!dist) return undefined;
-  const values = Object.values(dist);
-  return values.length > 0 ? Math.max(...values) : undefined;
+/**
+ * Jev returns no confidence for a noul answer, only the probability itself. A probability
+ * near 0.5 is an undecided answer, so confidence is its distance from the midpoint. That
+ * makes an undecided judge trip the min_confidence escalation instead of passing silently.
+ */
+export function noulConfidence(probability: number): number {
+  return clamp01(Math.abs(probability - 0.5) * 2);
 }
 
-function booleanProbability(answer: Answer): number {
-  if (typeof answer.probability === 'number') return clamp01(answer.probability, 0);
-  if (typeof answer.value === 'boolean') return answer.value ? 1 : 0;
-  const dist = answer.distribution;
-  if (dist) {
-    const yes = dist['true'] ?? dist['yes'] ?? dist['True'];
-    if (typeof yes === 'number') return clamp01(yes, 0);
-  }
-  throw new Error('boolean answer has neither probability, value nor distribution');
+/** Highest probability, used when the model omits an explicit confidence. */
+function topProbability(probabilities: Record<string, number> | undefined): number | undefined {
+  if (!probabilities) return undefined;
+  const values = Object.values(probabilities);
+  return values.length > 0 ? Math.max(...values) : undefined;
 }
 
 /** Turns a validated Jev envelope into the normalised Judgments the policy reads. */
 export function normaliseJevResponse(raw: unknown): Judgments {
-  const parsed = JevResponseSchema.parse(raw);
-  const answers = indexAnswers(parsed);
+  const parsed = JevEnvelopeSchema.parse(raw);
+  const answers = parsed.answers;
 
-  const taskAnswer = require_(answers, 'task_type');
-  const taskValue = String(taskAnswer.value ?? '');
-  if (!(TASK_TYPES as readonly string[]).includes(taskValue)) {
-    throw new Error(`judge returned unknown task_type "${taskValue}"`);
+  if (!(TASK_TYPES as readonly string[]).includes(answers.task_type.choice)) {
+    throw new Error(`judge returned unknown task_type "${answers.task_type.choice}"`);
   }
 
-  const difficultyAnswer = require_(answers, 'difficulty');
-  const difficulty = Number(difficultyAnswer.value);
-  if (!Number.isFinite(difficulty)) throw new Error('judge returned a non numeric difficulty');
-
-  const longOutput = require_(answers, 'needs_long_output');
-  const highStakes = require_(answers, 'high_stakes');
+  const maxScore = DIFFICULTY_LEVELS.length - 1;
+  const longOutput = clamp01(answers.needs_long_output.noul);
+  const highStakes = clamp01(answers.high_stakes.noul);
 
   return JudgmentsSchema.parse({
     task_type: {
-      value: taskValue,
-      confidence: clamp01(taskAnswer.confidence ?? topProbability(taskAnswer.distribution), 0),
-      ...(taskAnswer.distribution ? { distribution: taskAnswer.distribution } : {}),
+      value: answers.task_type.choice,
+      confidence: clamp01(answers.task_type.confidence ?? topProbability(answers.task_type.probabilities) ?? 0),
+      ...(answers.task_type.probabilities ? { distribution: answers.task_type.probabilities } : {}),
     },
     difficulty: {
-      value: Math.min(3, Math.max(0, difficulty)),
-      confidence: clamp01(difficultyAnswer.confidence ?? topProbability(difficultyAnswer.distribution), 0),
-      ...(difficultyAnswer.distribution ? { distribution: difficultyAnswer.distribution } : {}),
+      value: Math.min(maxScore, Math.max(0, answers.difficulty.score)),
+      confidence: clamp01(answers.difficulty.confidence ?? topProbability(answers.difficulty.probabilities) ?? 0),
+      ...(answers.difficulty.probabilities ? { distribution: answers.difficulty.probabilities } : {}),
     },
-    needs_long_output: {
-      probability: booleanProbability(longOutput),
-      confidence: clamp01(longOutput.confidence ?? topProbability(longOutput.distribution), 0),
-    },
-    high_stakes: {
-      probability: booleanProbability(highStakes),
-      confidence: clamp01(highStakes.confidence ?? topProbability(highStakes.distribution), 0),
-    },
+    needs_long_output: { probability: longOutput, confidence: noulConfidence(longOutput) },
+    high_stakes: { probability: highStakes, confidence: noulConfidence(highStakes) },
   });
 }

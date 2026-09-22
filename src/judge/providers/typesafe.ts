@@ -11,8 +11,8 @@ export class TypeSafeJudgeProvider implements JudgeProvider {
 
   constructor(
     private readonly apiKey: string,
-    private readonly baseUrl: string = DEFAULT_BASE_URL,
     private readonly model: string = DEFAULT_MODEL,
+    private readonly baseUrl: string = DEFAULT_BASE_URL,
   ) {}
 
   judge(state: JudgeState, signal: AbortSignal): Promise<Judgments> {

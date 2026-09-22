@@ -2,7 +2,7 @@ import { env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:
 import { beforeAll, describe, expect, it, vi, afterEach } from 'vitest';
 import worker, { type Env } from '../src/index';
 import exampleConfig from '../config/tiers.example.json';
-import arrayFixture from '../fixtures/jev-response.synthetic.json';
+import judgeFixture from '../fixtures/jev-router-questions.expected.json';
 import { applyMigrations } from './apply-migrations';
 
 const TIERS_CONFIG = JSON.stringify(exampleConfig);
@@ -41,8 +41,8 @@ function stubFetch(): void {
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
-      if (url.includes('/judge')) {
-        return new Response(JSON.stringify(arrayFixture), { headers: { 'content-type': 'application/json' } });
+      if (url.includes('/ai/run')) {
+        return new Response(JSON.stringify({ success: true, result: judgeFixture }), { headers: { 'content-type': 'application/json' } });
       }
       return new Response(JSON.stringify(upstreamBody), { headers: { 'content-type': 'application/json' } });
     }),
@@ -108,7 +108,7 @@ describe('worker', () => {
     stubFetch();
     const response = await run(
       chatRequest({ messages: [{ role: 'user', content: 'why is my worker returning 522?' }] }),
-      testEnv({ ROUTER_MODE: 'shadow', TIERS_CONFIG: JSON.stringify({ ...exampleConfig, judge: { provider: 'typesafe', deadline_ms: 2000, max_chars: 2000 } }), TYPESAFE_API_KEY: 'k' }),
+      testEnv({ ROUTER_MODE: 'shadow', TIERS_CONFIG: JSON.stringify({ ...exampleConfig, judge: { provider: 'cloudflare-rest', deadline_ms: 2000, max_chars: 2000 } }), CLOUDFLARE_ACCOUNT_ID: 'acct', CLOUDFLARE_API_TOKEN: 'token' }),
     );
     expect(response.status).toBe(200);
     expect(response.headers.get('x-router-tier')).toBe('mid');
@@ -124,12 +124,12 @@ describe('worker', () => {
         ROUTER_MODE: 'route',
         TIERS_CONFIG: JSON.stringify({
           ...exampleConfig,
-          judge: { provider: 'typesafe', deadline_ms: 2000, max_chars: 2000 },
+          judge: { provider: 'cloudflare-rest', deadline_ms: 2000, max_chars: 2000 },
           difficulty_tiers: { '0': 'small', '1': 'small', '2': 'small', '3': 'top' },
           task_type_min_tier: {},
           long_output_min_tier: 'small',
         }),
-        TYPESAFE_API_KEY: 'k',
+        CLOUDFLARE_ACCOUNT_ID: 'acct', CLOUDFLARE_API_TOKEN: 'token',
       }),
     );
     expect(response.headers.get('x-router-tier')).toBe('small');
@@ -151,7 +151,7 @@ describe('worker', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input instanceof Request ? input.url : input);
-        if (url.includes('/judge')) return new Response('boom', { status: 500 });
+        if (url.includes('/ai/run')) return new Response('boom', { status: 500 });
         return new Response(JSON.stringify(upstreamBody), { headers: { 'content-type': 'application/json' } });
       }),
     );
@@ -159,8 +159,8 @@ describe('worker', () => {
       chatRequest({ messages: [{ role: 'user', content: 'hi' }] }),
       testEnv({
         ROUTER_MODE: 'route',
-        TIERS_CONFIG: JSON.stringify({ ...exampleConfig, judge: { provider: 'typesafe', deadline_ms: 2000, max_chars: 2000 } }),
-        TYPESAFE_API_KEY: 'k',
+        TIERS_CONFIG: JSON.stringify({ ...exampleConfig, judge: { provider: 'cloudflare-rest', deadline_ms: 2000, max_chars: 2000 } }),
+        CLOUDFLARE_ACCOUNT_ID: 'acct', CLOUDFLARE_API_TOKEN: 'token',
       }),
     );
     expect(response.status).toBe(200);

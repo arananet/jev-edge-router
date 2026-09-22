@@ -1,24 +1,37 @@
 # Known issues
 
-## Jev wire format is unverified
+## Jev responses not yet recorded from a live call
 **Status**: Blocked
-**Detail**: `src/judge/wire.ts` and the fixtures in `fixtures/` were written against the
-documented envelope in `docs/jev-wire-format.md`, not against a recorded response. No
-TypeSafe, Vercel or Workers AI credentials were available on 2026-09-22. Field names, the
-question type names (`Choice`, `Score`, `Noul`) and the answer envelope may all be wrong.
-**Workaround**: Run `npm run probe` with real credentials, record the redacted sample, correct
-the adapter, then run in `ROUTER_MODE=shadow` before trusting any routing decision.
+**Detail**: The adapters implement the `typesafe/jev` schema from the Workers AI model
+catalogue (kept verbatim in `fixtures/jev-vendor-example.json`), but no call from this repo
+has been made: `api.cloudflare.com` is outside the egress allowlist of the environment the
+code was written in, so the request is refused with `403 Host not in allowlist`. The two
+router-shaped fixtures were written from the documented schema, not recorded.
+**Workaround**: From a network that can reach the API, run
+`CLOUDFLARE_ACCOUNT_ID=... CLOUDFLARE_API_TOKEN=... npm run probe -- --record`, point the
+tests at the recorded fixture, and delete the "expected" ones.
 
-## Judge model ids are placeholders
+## Upstream providers not yet exercised against a real API
 **Status**: Blocked
-**Detail**: `@typesafe/jev-1` (Workers AI), `jev-1` (TypeSafe REST) and `typesafe/jev-1`
-(Vercel) are guesses, as are the two REST base URLs. Each provider takes an explicit
-`judge.model` and `judge.base_url` from config, so correcting them is a config change.
-**Workaround**: Set `judge.model` and `judge.base_url` from the vendor's own docs.
+**Detail**: `api.openai.com` is blocked by the same egress policy, so the OpenAI-compatible
+and Anthropic adapters are covered by unit tests and stubbed fetches only. No end to end call
+through the Worker to a real model has been made.
+**Workaround**: `npm run dev` with `UPSTREAM_API_KEY_MID` set, then curl the worker.
+
+## TypeSafe and Vercel judge endpoints are guesses
+**Status**: Blocked
+**Detail**: The Cloudflare paths (`typesafe/jev` through the binding and through
+`/accounts/{id}/ai/run`) are documented. The direct TypeSafe REST API and the Vercel AI
+Gateway adapters in `src/judge/providers/` assume the same payload at guessed base URLs and
+model ids, because neither vendor's endpoint has been checked.
+**Workaround**: Set `judge.base_url` and `judge.model` from the vendor's own docs, or stay on
+`judge.provider: "cloudflare"`.
 
 ## No routing accuracy numbers yet
 **Status**: Blocked
-**Detail**: Every threshold in `config/tiers.example.json` (`min_confidence` 0.55,
+**Detail**: `eval/dataset.example.jsonl` carries hand-written judgments so the harness runs
+offline; its 100% accuracy measures the plumbing, not the judge, and means nothing. Every
+threshold in `config/tiers.example.json` (`min_confidence` 0.55,
 `high_stakes_threshold` 0.8, the difficulty table) is a placeholder chosen to be
 conservative, not a value derived from eval output. TypeSafe's published speed, cost and
 accuracy figures are the vendor's own numbers and are not reproduced here.

@@ -26,8 +26,8 @@ export const RouterConfigSchema = z
     task_type_min_tier: z.record(z.string(), z.string().min(1)).default({}),
     long_output_min_tier: z.string().min(1).optional(),
     judge: z.object({
-      provider: z.enum(['cloudflare', 'typesafe', 'vercel']),
-      model: z.string().min(1).optional(),
+      provider: z.enum(['cloudflare', 'cloudflare-rest', 'typesafe', 'vercel']),
+      model: z.string().min(1).default('typesafe/jev'),
       deadline_ms: z.number().int().positive(),
       base_url: z.string().url().optional(),
       /** Char budget for each free text field sent to the judge. */

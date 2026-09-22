@@ -10,6 +10,8 @@ export interface Env {
   AI?: Ai;
   DB?: D1Database;
   TIERS_CONFIG?: string;
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_API_TOKEN?: string;
   ROUTER_MODE?: string;
   LOG_CONTENT?: string;
   ROUTER_API_KEYS?: string;
@@ -95,6 +97,8 @@ async function handleChatCompletions(request: Request, env: Env, ctx: ExecutionC
     try {
       const provider = createJudgeProvider(config, {
         ...(env.AI ? { ai: env.AI } : {}),
+        ...(env.CLOUDFLARE_ACCOUNT_ID ? { cloudflare_account_id: env.CLOUDFLARE_ACCOUNT_ID } : {}),
+        ...(env.CLOUDFLARE_API_TOKEN ? { cloudflare_api_token: env.CLOUDFLARE_API_TOKEN } : {}),
         ...(env.TYPESAFE_API_KEY ? { typesafe_api_key: env.TYPESAFE_API_KEY } : {}),
         ...(env.VERCEL_AI_GATEWAY_KEY ? { vercel_api_key: env.VERCEL_AI_GATEWAY_KEY } : {}),
       });

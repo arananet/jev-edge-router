@@ -25,8 +25,9 @@ Worker: src/index.ts
 ```
 
 Nothing outside `src/judge/providers/` and `src/upstream/providers/` knows which vendor is in
-use. Swapping the judge from Workers AI to the TypeSafe REST API or the Vercel AI Gateway is a
-config change.
+use. `judge.provider` picks between `cloudflare` (the Workers AI binding), `cloudflare-rest`
+(`POST /accounts/{id}/ai/run`, for callers without the binding), `typesafe` and `vercel`.
+Swapping is a config change.
 
 If the judge times out, errors or answers with low confidence, the request is never blocked: it
 falls back to `default_tier` or escalates one tier. A broken judge costs money, never
@@ -76,8 +77,9 @@ x-router-judge-latency-ms: 180
 
 ## What Jev is asked
 
-One request per routed call, four independent questions: `task_type` (choice of ten),
-`difficulty` (0 to 3, with concrete level descriptions), `needs_long_output` and `high_stakes`.
+One request per routed call, four independent questions in the `typesafe/jev` schema:
+`task_type` (a choice over ten categories), `difficulty` (a score over four concrete levels, so
+the answer is a float from 0 to 3), and the nouls `needs_long_output` and `high_stakes`.
 Only free text and the turn count are sent. Token counts, tool presence, images and model
 pinning are computed in code and never asked. The set lives in `src/judge/questions.ts`; every
 new question needs an eval result behind it.
@@ -111,11 +113,16 @@ usage and estimated cost against the cost of the top tier. Prompt content is **n
 
 ## Honest limitations
 
-- **The Jev wire format in this repo is unverified.** It was written against a documented
-  assumption, not a recorded response. Probe first: `npm run probe`. See
+- **No live call has been made from this repo.** The adapters implement the documented
+  `typesafe/jev` schema, but `api.cloudflare.com` and `api.openai.com` are both outside the
+  egress allowlist of the environment this was written in, so the fixtures are schema-shaped,
+  not recorded. Probe first: `npm run probe -- --record`. See
   [`docs/jev-wire-format.md`](docs/jev-wire-format.md).
 - **No routing accuracy numbers yet.** Every threshold shipped is a conservative placeholder,
-  not an eval result. Nothing here reproduces TypeSafe's own speed or accuracy figures.
+  not an eval result, and the example dataset carries hand-written judgments so the harness
+  runs offline. Nothing here reproduces TypeSafe's own speed or accuracy figures.
+- **The TypeSafe and Vercel judge endpoints are guesses.** Only the two Cloudflare paths are
+  documented.
 - **No rate limiting.** Client keys are authenticated but not throttled.
 - **Token counts are estimated** at four characters per token, including the context window
   checks in the policy.
