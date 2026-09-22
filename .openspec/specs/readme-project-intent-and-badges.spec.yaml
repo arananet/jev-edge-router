@@ -1,0 +1,43 @@
+---
+title: readme-project-intent-and-badges
+slug: readme-project-intent-and-badges
+type: feature
+status: review
+author: Arananet
+created_at: '2026-09-22'
+updated_at: '2026-09-22'
+roles:
+  implementer:
+  reviewer:
+  qa:
+  product_owner:
+description: >-
+  Present the purpose of jev-edge-router clearly to first-time visitors and expose its
+  runtime, license, and validation posture through non-secret README badges. The opening
+  documentation should explain why Jev is used for model-tier orchestration rather than
+  appearing as an unexplained implementation detail, and include sanitized live-validation
+  evidence that is useful to readers without exposing credentials.
+acceptance_criteria:
+- A visitor can identify the project as an OpenAI-compatible Cloudflare Workers gateway that uses TypeSafe Jev judgments to choose a capable, cost-conscious model tier.
+- The README shows accurate badges for the Apache-2.0 license, Cloudflare Workers runtime, TypeScript implementation, and test command.
+- The introduction explains the difference between a regular default-tier request and Jev-assisted routing, including the safety fallback.
+- The README includes a Mermaid chart contrasting fixed-model OpenAI-compatible routing with Jev-assisted orchestration and its deterministic policy boundary.
+- The README includes a decision-property comparison between TypeSafe Jev and a general-purpose LLM used as a router, without unmeasured quality, latency, or cost claims.
+- The README embeds a local sanitized screenshot of actual live-validation output with no credentials, account identifiers, or raw request data.
+test_plan:
+- Run the repository Markdown linter against README.md.
+- Review every badge target and label for accuracy against package.json, LICENSE, and the documented runtime.
+- Inspect the committed screenshot for legibility and absence of secret material.
+qa_notes: |
+  Verify badge image URLs and links contain no repository-specific secret or account information.
+out_of_scope:
+- Changing router behavior, deployment configuration, or the existing setup instructions.
+implementation_skill:
+eval_plan:
+  scenarios: []
+  metrics: []
+technical_notes: |
+  Use static shields.io badges and public URLs only. Store the screenshot under docs/images/
+  and do not add badges that imply unverified live performance or deployment status.
+linked_issues: []
+linked_prs: []

@@ -1,11 +1,76 @@
 # jev-edge-router
 
-> An OpenAI-compatible model gateway on Cloudflare Workers that asks TypeSafe Jev a few typed
-> questions about each request, then sends it to the cheapest model tier that can handle it.
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-2ea44f.svg)](LICENSE)
+![Runtime: Cloudflare Workers](https://img.shields.io/badge/runtime-Cloudflare%20Workers-f38020?logo=cloudflare&logoColor=white)
+![Language: TypeScript](https://img.shields.io/badge/language-TypeScript-3178c6?logo=typescript&logoColor=white)
+![Tests: Vitest](https://img.shields.io/badge/tests-Vitest-6e9f18?logo=vitest&logoColor=white)
+
+> An OpenAI-compatible model gateway for Cloudflare Workers that uses TypeSafe Jev to choose the
+> cheapest configured model tier that can safely handle each request.
+
+Most gateways send every request to a fixed default model. `jev-edge-router` first computes hard
+requirements such as tool use, image input, and context size. Jev then answers four typed
+questions about the request; a deterministic policy combines those judgments with the computed
+requirements to select a tier. The selected upstream model produces the answer through the normal
+OpenAI Chat Completions interface.
+
+This keeps the routing decision observable and reversible: in `shadow` mode Jev decisions are
+logged while the default tier still serves the request; in `route` mode the decision is applied;
+and if Jev is unavailable, the gateway fails open to the configured default tier. Any OpenAI
+compatible client can use it by changing its base URL.
+
+## Fixed routing vs. Jev orchestration
+
+```mermaid
+flowchart LR
+  subgraph regular[Regular OpenAI-compatible routing]
+    regularRequest[Client request] --> regularGateway[Gateway]
+    regularGateway --> regularModel[Configured default model]
+    regularModel --> regularResponse[Response]
+  end
+
+  subgraph jev[Jev-assisted orchestration]
+    jevRequest[Client request] --> features[Compute hard requirements]
+    features --> judge[TypeSafe Jev: typed judgments]
+    judge --> policy[Deterministic tier policy]
+    policy --> selectedModel[Selected capable model tier]
+    selectedModel --> jevResponse[Response]
+    judge -. unavailable .-> fallback[Default tier]
+    fallback --> jevResponse
+  end
+```
 
 Code calculates, Jev judges, the policy decides, the upstream model answers.
 
-Any client that speaks the OpenAI Chat Completions API can use it by changing a base URL.
+## Why Jev fits routing decisions
+
+Jev is not presented here as a better answer-generating LLM. It is a better fit for this narrow
+orchestration step because the router needs bounded, machine-checkable signals rather than an
+open-ended explanation or a model's self-selected route. The deterministic policy remains the
+authority for capability constraints, cost thresholds, escalation, and fallback.
+
+| Decision property | General-purpose LLM used as a router | TypeSafe Jev in this router |
+| --- | --- | --- |
+| Expected result | Prompt-defined prose or JSON contract | Declared choice, score, and boolean questions |
+| Route vocabulary | Must be constrained in the prompt and parsed afterward | Fixed task categories and score levels validated by schema |
+| Uncertainty signal | Optional and prompt-dependent | Per-question confidence; boolean judgments also return probability |
+| Deterministic requirements | Must be repeated in the routing prompt or rechecked later | Computed separately for tokens, tools, images, and pinned models |
+| Routing authority | The LLM response can directly imply a model choice | A pure policy maps validated judgments and requirements to a tier |
+| Failure behavior | Custom parsing and fallback are required | Deadline, low-confidence handling, and fail-open fallback are explicit |
+
+This is a design comparison, not a claim that Jev is universally more capable, faster, or cheaper
+than another LLM. It describes why its typed judgments are easier to audit and safely compose into
+this router's policy.
+
+---
+
+## Live validation
+
+The sanitized report below captures a real OpenAI-compatible upstream response, including its model
+and token usage. It contains no credentials, account identifiers, request headers, or raw prompt
+content.
+
+![Sanitized live OpenAI upstream validation report](docs/images/jev-live-validation.png)
 
 ---
 

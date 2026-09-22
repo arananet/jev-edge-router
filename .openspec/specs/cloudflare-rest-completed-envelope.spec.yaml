@@ -1,0 +1,37 @@
+---
+title: cloudflare-rest-completed-envelope
+slug: cloudflare-rest-completed-envelope
+type: bugfix
+status: review
+author: Arananet
+created_at: '2026-09-22'
+updated_at: '2026-09-22'
+roles:
+  implementer:
+  reviewer:
+  qa:
+  product_owner:
+description: >-
+  The Cloudflare REST `ai/run` endpoint now returns completed Jev output as
+  `{ success: true, result: { state: "Completed", result: <jev-result> } }`.
+  The router accepts only direct Jev output and the former one-level REST envelope,
+  so a successful live judge call is treated as unavailable and routes to the default tier.
+root_cause: >-
+  `JevEnvelopeSchema` models only the documented one-level Cloudflare REST envelope.
+  It does not unwrap the completed asynchronous job envelope observed from the live endpoint.
+reproduction_steps:
+- Configure the Cloudflare REST judge provider with valid account credentials.
+- Send a valid Jev router payload to `POST /accounts/{account_id}/ai/run`.
+- Observe HTTP 200 with `result.state` equal to `Completed`, followed by a Zod validation error during normalization.
+acceptance_criteria:
+- "`normaliseJevResponse` accepts a successful Cloudflare completed-job envelope and produces the same judgments as its nested Jev result."
+- Direct binding results and the existing one-level Cloudflare REST envelope remain accepted.
+- A completed-job envelope without a valid nested Jev result is rejected rather than silently producing a judgment.
+test_plan:
+- Add a sanitized fixture matching the observed completed-job envelope and normalize it in `test/judge.test.ts`.
+- Run `npm test -- --run test/judge.test.ts`; then run `npm run typecheck`.
+implementation_skill:
+regression_test: |
+  test/judge.test.ts — unwraps the Cloudflare REST completed-job envelope
+linked_issues: []
+linked_prs: []
