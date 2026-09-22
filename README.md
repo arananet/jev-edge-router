@@ -273,6 +273,7 @@ Commands: `npm test`, `npm run typecheck`, `bash scripts/openspec check`.
 | Known issues | [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) |
 | Spec-driven workflow | [`docs/OPENSPEC.md`](docs/OPENSPEC.md) |
 | Guided project setup | [`docs/ONBOARDING.md`](docs/ONBOARDING.md) |
+| Incremental adoption of the spec workflow | [`docs/ADOPTION.md`](docs/ADOPTION.md) |
 | Security policy | [`SECURITY.md`](SECURITY.md) |
 | Release history | [`CHANGELOG.md`](CHANGELOG.md) |
 
