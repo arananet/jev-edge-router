@@ -1,0 +1,27 @@
+name = "jev-edge-router"
+main = "src/index.ts"
+compatibility_date = "2024-12-30"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# TIERS_CONFIG holds config/tiers.json as a single JSON string. Keep it out of this file in
+# production and set it with `wrangler secret put TIERS_CONFIG` when it names private hosts.
+# TIERS_CONFIG = "{...}"
+ROUTER_MODE = "shadow"
+LOG_CONTENT = "false"
+
+[ai]
+binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "jev-edge-router-db"
+database_id = "replace-me-after-wrangler-d1-create"
+
+# Secrets (set with `wrangler secret put <NAME>`), never in this file:
+#   ROUTER_API_KEYS        comma separated client keys accepted by the gateway
+#   CLOUDFLARE_ACCOUNT_ID  only for judge.provider=cloudflare-rest
+#   CLOUDFLARE_API_TOKEN   only for judge.provider=cloudflare-rest
+#   TYPESAFE_API_KEY       TypeSafe REST judge provider (endpoint unverified)
+#   VERCEL_AI_GATEWAY_KEY  Vercel AI Gateway judge provider
+#   UPSTREAM_API_KEY_<TIER> upstream credential per tier, tier name upper-cased

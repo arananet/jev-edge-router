@@ -1,0 +1,26 @@
+{
+  "_note": "The REST API wraps the same result in the standard Cloudflare envelope; the Workers AI binding returns the inner object. Both are accepted by normaliseJevResponse.",
+  "success": true,
+  "errors": [],
+  "messages": [],
+  "result": {
+    "model": "jev-1.13.0",
+    "answers": {
+      "task_type": {
+        "type": "choice",
+        "choice": "chit_chat",
+        "confidence": 0.96,
+        "probabilities": { "chit_chat": 0.98, "other": 0.02 }
+      },
+      "difficulty": {
+        "type": "score",
+        "score": 0.04,
+        "confidence": 0.95,
+        "probabilities": { "0": 0.96, "1": 0.04, "2": 0, "3": 0 }
+      },
+      "needs_long_output": { "type": "noul", "noul": 0.02 },
+      "high_stakes": { "type": "noul", "noul": 0.01 }
+    },
+    "usage": { "input_tokens": 402, "output_tokens": 61 }
+  }
+}

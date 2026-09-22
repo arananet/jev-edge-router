@@ -1,0 +1,27 @@
+{
+  "name": "jev-edge-router",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenAI-compatible model gateway on Cloudflare Workers that routes with TypeSafe Jev judgments",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "eval": "tsx eval/run-eval.ts eval/dataset.jsonl",
+    "probe": "tsx scripts/probe-jev.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.5.40",
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "2.1.9",
+    "wrangler": "^3.101.0"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  }
+}

@@ -184,3 +184,8 @@ terraform.rc
 # ─── OpenSpec local state ──────────────────────────────────────────────────
 .openspec/.cache/
 .openspec/local.yaml
+
+# ─── Router local config ───────────────────────────────────────────────────
+config/tiers.json
+eval/dataset.jsonl
+fixtures/*.local.json

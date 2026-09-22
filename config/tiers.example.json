@@ -1,0 +1,47 @@
+{
+  "tier_order": ["small", "mid", "top"],
+  "default_tier": "mid",
+  "min_confidence": 0.55,
+  "high_stakes_threshold": 0.8,
+  "high_stakes_min_tier": "top",
+  "allow_client_model_pinning": false,
+  "difficulty_tiers": { "0": "small", "1": "small", "2": "mid", "3": "top" },
+  "task_type_min_tier": {
+    "code_debugging": "mid",
+    "math_or_formal_reasoning": "mid",
+    "multi_step_planning_or_agentic": "mid"
+  },
+  "long_output_min_tier": "mid",
+  "judge": { "provider": "cloudflare", "model": "typesafe/jev", "deadline_ms": 400, "max_chars": 2000 },
+  "tiers": {
+    "small": {
+      "provider": "openai-compatible",
+      "base_url": "https://api.example-small.com/v1",
+      "model": "replace-me-small",
+      "context_window": 128000,
+      "supports_tools": true,
+      "supports_images": false,
+      "price_in_per_mtok": 0.1,
+      "price_out_per_mtok": 0.4
+    },
+    "mid": {
+      "provider": "openai-compatible",
+      "base_url": "https://api.example-mid.com/v1",
+      "model": "replace-me-mid",
+      "context_window": 200000,
+      "supports_tools": true,
+      "supports_images": true,
+      "price_in_per_mtok": 1.0,
+      "price_out_per_mtok": 4.0
+    },
+    "top": {
+      "provider": "anthropic",
+      "model": "replace-me-top",
+      "context_window": 200000,
+      "supports_tools": true,
+      "supports_images": true,
+      "price_in_per_mtok": 5.0,
+      "price_out_per_mtok": 25.0
+    }
+  }
+}

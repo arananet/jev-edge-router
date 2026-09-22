@@ -1,0 +1,22 @@
+{
+  "_note": "This repo's four questions in the documented answer shape. Written from the schema in fixtures/jev-vendor-example.json, NOT recorded from a live call: api.cloudflare.com is outside this environment's egress allowlist. Replace it with `npm run probe -- --record` output.",
+  "model": "jev-1.13.0",
+  "answers": {
+    "task_type": {
+      "type": "choice",
+      "choice": "code_debugging",
+      "confidence": 0.8,
+      "probabilities": { "code_debugging": 0.87, "code_generation": 0.13, "other": 0 }
+    },
+    "difficulty": {
+      "type": "score",
+      "score": 1.86,
+      "confidence": 0.71,
+      "legend": { "0": "trivial", "1": "careful", "2": "multi-step", "3": "hardest" },
+      "probabilities": { "0": 0.02, "1": 0.24, "2": 0.6, "3": 0.14 }
+    },
+    "needs_long_output": { "type": "noul", "noul": 0.18 },
+    "high_stakes": { "type": "noul", "noul": 0.05 }
+  },
+  "usage": { "input_tokens": 512, "output_tokens": 88 }
+}
