@@ -32,9 +32,13 @@ for guide in docs/ONBOARDING.md docs/ADOPTION.md; do
   [[ -f "$ROOT/$guide" ]] || fail "missing adoption guide: $guide"
   grep -q "$guide" "$ROOT/README.md" || fail "README does not link to $guide"
 done
-awk '/^## Start With This Template$/ { found=1 } /^## Quick start$/ { exit !found } END { if (!found) exit 1 }' "$ROOT/README.md" || fail "minimal adoption path must precede project quickstart"
-grep -q '{{PROJECT_NAME}}' "$ROOT/README.md"
-grep -q '{{TEST_COMMAND}}' "$ROOT/README.md"
+# This repository is an onboarded project, not the upstream template: the README
+# documents jev-edge-router and .openspec/config.yaml carries real values, so the
+# placeholder and "Start With This Template" assertions no longer apply here.
+grep -q '## Quick start' "$ROOT/README.md" || fail "README lost its quick start"
+if grep -q '{{' "$ROOT/.openspec/config.yaml"; then
+  fail "openspec config still has template placeholders"
+fi
 printf 'PASS: shared agent contract and on-demand onboarding\n'
 
 CHECK_SCRIPT="$(awk '/^```bash$/ { in_block=1; next } /^```$/ { in_block=0 } in_block' "$ROOT/.claude/commands/openspec-check.md")"
