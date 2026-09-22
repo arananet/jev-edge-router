@@ -7,10 +7,10 @@ author: Arananet
 created_at: '2026-09-22'
 updated_at: '2026-09-22'
 roles:
-  implementer: 
-  reviewer: 
-  qa: 
-  product_owner: 
+  implementer:
+  reviewer:
+  qa:
+  product_owner:
 description: >-
   Evaluate TypeSafe Jev as a routing judge using human-labeled orchestration
   scenarios. The evaluation must compare Jev-assisted policy decisions with the
@@ -35,7 +35,7 @@ out_of_scope:
 - Measuring answer quality from the selected upstream model.
 - Benchmarking provider latency, throughput, or availability.
 - Claiming superiority over a general-purpose LLM router without a separately labeled comparison.
-implementation_skill: 
+implementation_skill:
 eval_plan:
   scenarios:
     - eval/orchestration-scenarios.jsonl
