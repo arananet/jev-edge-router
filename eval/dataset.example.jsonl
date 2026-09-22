@@ -1,0 +1,8 @@
+{"id": "chat-001", "prompt": "hey, how's it going?", "label_tier": "small"}
+{"id": "fact-002", "prompt": "What year did the Cloudflare Workers platform launch?", "label_tier": "small"}
+{"id": "sum-003", "prompt": "Summarise these release notes into three bullets: ...", "label_tier": "small"}
+{"id": "code-004", "prompt": "Write a TypeScript function that debounces an async callback and cancels in-flight calls.", "label_tier": "mid"}
+{"id": "debug-005", "prompt": "My Worker returns 522 only when streaming a response through a TransformStream. Here is the handler: ...", "label_tier": "mid"}
+{"id": "math-006", "prompt": "Prove that the sum of the first n odd numbers equals n squared, then generalise to arithmetic progressions.", "label_tier": "mid"}
+{"id": "legal-007", "prompt": "We process EU health records in a US region. Draft the contractual clauses we need and flag the residency risks.", "label_tier": "top"}
+{"id": "sec-008", "prompt": "Review this auth middleware for privilege escalation before we ship it to production banking customers: ...", "label_tier": "top"}
