@@ -38,14 +38,14 @@ out_of_scope:
 implementation_skill:
 eval_plan:
   scenarios:
-    - eval/orchestration-scenarios.jsonl
+  - eval/orchestration-scenarios.jsonl
   metrics:
-    - exact routing rate
-    - under-routing rate
-    - severity-weighted under-routing impact
-    - over-routing rate
-    - baseline under-routes corrected by Jev
-    - baseline over-routes avoided by Jev
+  - exact routing rate
+  - under-routing rate
+  - severity-weighted under-routing impact
+  - over-routing rate
+  - baseline under-routes corrected by Jev
+  - baseline over-routes avoided by Jev
 technical_notes: |
   The fixed baseline is the configured default_tier. Existing recorded or
   hand-written judgments remain useful for policy regression tests but cannot be

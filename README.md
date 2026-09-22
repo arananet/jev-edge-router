@@ -99,6 +99,13 @@ If the judge times out, errors or answers with low confidence, the request is ne
 falls back to `default_tier` or escalates one tier. A broken judge costs money, never
 correctness.
 
+## Start With This Template
+
+Before adapting this project, replace `{{PROJECT_NAME}}` and the remaining placeholders in
+`.openspec/config.yaml`, including the configured `{{TEST_COMMAND}}`. Follow the
+[onboarding guide](docs/ONBOARDING.md) for the setup steps and [adoption guide](docs/ADOPTION.md)
+for the governance and rollout checklist.
+
 ## Quick start
 
 ```bash
@@ -201,6 +208,8 @@ small live sample it removed the baseline's only high-severity under-route and i
 routing, while its typed output, deterministic policy, and decision telemetry make each route
 reviewable. That is enough evidence to start a controlled adoption; it is not evidence to switch
 all enterprise traffic to dynamic routing.
+
+For the staged onboarding and governance model, see [the adoption guide](docs/ADOPTION.md).
 
 **Recommended rollout:** run `shadow` mode against a representative, approved traffic sample;
 review disagreements and latency by scenario family; then canary `route` mode for bounded,
