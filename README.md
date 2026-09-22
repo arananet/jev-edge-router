@@ -99,13 +99,6 @@ If the judge times out, errors or answers with low confidence, the request is ne
 falls back to `default_tier` or escalates one tier. A broken judge costs money, never
 correctness.
 
-## Start With This Template
-
-Before adapting this project, replace `{{PROJECT_NAME}}` and the remaining placeholders in
-`.openspec/config.yaml`, including the configured `{{TEST_COMMAND}}`. Follow the
-[onboarding guide](docs/ONBOARDING.md) for the setup steps and [adoption guide](docs/ADOPTION.md)
-for the governance and rollout checklist.
-
 ## Quick start
 
 ```bash
