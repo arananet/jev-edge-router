@@ -1,0 +1,22 @@
+{
+  "answers": [
+    {
+      "name": "task_type",
+      "value": "code_debugging",
+      "confidence": 0.72,
+      "distribution": {
+        "code_debugging": 0.72,
+        "code_generation": 0.18,
+        "other": 0.1
+      }
+    },
+    {
+      "name": "difficulty",
+      "value": 2,
+      "confidence": 0.64,
+      "distribution": { "0": 0.05, "1": 0.15, "2": 0.64, "3": 0.16 }
+    },
+    { "name": "needs_long_output", "probability": 0.21, "confidence": 0.79 },
+    { "name": "high_stakes", "probability": 0.08, "confidence": 0.9 }
+  ]
+}

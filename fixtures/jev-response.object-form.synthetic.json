@@ -1,0 +1,8 @@
+{
+  "answers": {
+    "task_type": { "value": "chit_chat", "distribution": { "chit_chat": 0.93, "other": 0.07 } },
+    "difficulty": { "value": 0, "distribution": { "0": 0.88, "1": 0.1, "2": 0.02, "3": 0.0 } },
+    "needs_long_output": { "value": false, "confidence": 0.95 },
+    "high_stakes": { "distribution": { "true": 0.02, "false": 0.98 }, "confidence": 0.97 }
+  }
+}
